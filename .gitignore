@@ -1,7 +1,2 @@
 # pycache
 __pycache__/
-
-# data
-*.csv
-*.xlsx
-*.xls
