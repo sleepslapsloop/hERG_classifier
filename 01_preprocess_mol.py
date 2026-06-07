@@ -1,7 +1,8 @@
 """
 This script processes the hERG ChEMBL dataset stored in Data/hERG_ChEMBL.csv.
 Relation Schema:
-R1(Chembl attr) -----This Script----> R2(Smiles: str, Standard Type: str, Standard Relation: str, Standard Value: float, Standard Units: str, mol: rdkit.Chem.rdchem.Mol)
+    R1(Chembl attr) -----This Script----> R2(Smiles: str, Standard Type: str, Standard Relation: str, Standard Value: float, Standard Units: str, mol: rdkit.Chem.rdchem.Mol)
+    (Only Smiles, pIC50, mol are saved)
 Standard Type refers to the type of standard used for the assay (e.g., IC50, Ki, Kd), here it is IC50
 Standard Relation refers to the relation between the standard value and the target (e.g., '='), here '=' has been selected
 Standard Units refers to the units of the standard value (e.g., nM, μM, mM), here it is nM
