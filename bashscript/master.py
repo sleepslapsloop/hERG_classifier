@@ -1,8 +1,17 @@
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 # Gets the absolute path of the directory containing master.py
 BASE_DIR = Path(__file__).parent.resolve()
+
+
+@dataclass(frozen=True)
+class hERG:
+    center_of_mass: tuple[float, float, float] = (143.219, 153.455, 132.858)
+    center_x: float = center_of_mass[0]
+    center_y: float = center_of_mass[1]
+    center_z: float = center_of_mass[2]
 
 
 def _run_script(script_name: str, args: list):
@@ -48,98 +57,74 @@ def dock(
 
 
 def get_top_energies() -> list:
-    """Reads log.txt and returns a list of the top 3 binding energies."""
-    # Based on vinaDock.sh, the log is saved in the same directory as execution
-    log_path = BASE_DIR / "log.txt"
+    """Reads 1.txt/2.txt/3.txt and returns a list of the top 3 binding energies."""
+    dock_dir = (BASE_DIR / "../Data/Docking/dock").resolve()
     top_energies = []
 
-    try:
-        with open(log_path, "r") as file:
-            lines = file.readlines()
-
-        # Vina's log outputs a table. We need to find where the separator line is.
-        table_start_index = -1
-        for i, line in enumerate(lines):
-            if line.startswith("-----+------------+----------+----------"):
-                table_start_index = i + 1
-                break
-
-        if table_start_index != -1:
-            # Grab up to 3 lines immediately following the table header
-            for i in range(table_start_index, min(table_start_index + 3, len(lines))):
-                columns = lines[i].split()
-                if len(columns) >= 2:
-                    try:
-                        # The second column is the affinity (energy)
-                        energy = float(columns[1])
-                        top_energies.append(energy)
-                    except ValueError:
-                        continue
-
-        return top_energies
-
-    except FileNotFoundError:
-        print(f"❌ Could not find Vina log file at {log_path}")
-        return []
-
-
-def get_top_energies_and_cleanup() -> list:
-    """Reads log.txt, extracts top 3 energies, and cleans up docking files."""
-    log_path = BASE_DIR / "log.txt"
-    top_energies = []
-
-    # 1. Extract the energies
-    try:
-        with open(log_path, "r") as file:
-            lines = file.readlines()
-
-        table_start_index = -1
-        for i, line in enumerate(lines):
-            if line.startswith("-----+------------+----------+----------"):
-                table_start_index = i + 1
-                break
-
-        if table_start_index != -1:
-            for i in range(table_start_index, min(table_start_index + 3, len(lines))):
-                columns = lines[i].split()
-                if len(columns) >= 2:
-                    try:
-                        top_energies.append(float(columns[1]))
-                    except ValueError:
-                        continue
-    except FileNotFoundError:
-        print(f"❌ Could not find Vina log file at {log_path}")
-
-    # 2. Safely Clean Up the Workspace
-    print("🧹 Cleaning up temporary and output files...")
-
-    # Delete the log.txt file
-    if log_path.exists():
-        log_path.unlink()
-
-    # Delete all generated ligand files (ligand.pdbqt, ligand_temp.mol2)
-    ligand_dir = (BASE_DIR / "../Data/Docking/ligand").resolve()
-    if ligand_dir.exists():
-        for file in ligand_dir.glob("*"):
-            if file.is_file():
-                file.unlink()
-
-    # Delete Vina PDBQT output files (Vina usually creates an *_out.pdbqt file)
-    # This checks the directory where master.py was run from
-    for out_file in BASE_DIR.glob("*_out.pdbqt"):
-        out_file.unlink()
-
-    # We do NOT touch ../Data/Docking/receptor, keeping receptor.pdbqt safe!
+    for i in range(1, 4):
+        file_path = dock_dir / f"{i}.txt"
+        try:
+            with open(file_path, "r") as file:
+                line = file.read()
+                if line:
+                    line = line.strip()
+                    energy = float(line[8:14].strip())
+                    top_energies.append(energy)
+        except FileNotFoundError:
+            continue
 
     return top_energies
 
 
-# Optional: You can keep a test block here.
-# Code inside here won't run when you import this file from another script.
+def cleanup():
+    """
+    Deletes all temporary and output files generated during a docking run:
+      - log.txt, 1.txt, 2.txt, 3.txt  (from ../Data/Docking/dock/)
+      - All ligand files               (from ../Data/Docking/ligand/)
+      - Vina *_out.pdbqt output files  (from the dock directory)
+
+    The receptor (../Data/Docking/receptor/) is intentionally left untouched.
+    """
+    dock_dir = (BASE_DIR / "../Data/Docking/dock").resolve()
+    ligand_dir = (BASE_DIR / "../Data/Docking/ligand").resolve()
+
+    deleted = []
+    missing = []
+
+    # --- Dock directory: log + mode result files ---
+    for filename in ["log.txt", "1.txt", "2.txt", "3.txt"]:
+        f = dock_dir / filename
+        if f.exists():
+            f.unlink()
+            deleted.append(str(f))
+        else:
+            missing.append(str(f))
+
+    # --- Dock directory: Vina *_out.pdbqt files ---
+    for f in dock_dir.glob("*_out.pdbqt"):
+        f.unlink()
+        deleted.append(str(f))
+
+    # --- Ligand directory: all files ---
+    if ligand_dir.exists():
+        for f in ligand_dir.iterdir():
+            if f.is_file():
+                f.unlink()
+                deleted.append(str(f))
+
+    # if deleted:
+    #     print(f"🧹 Cleaned up {len(deleted)} file(s).")
+    # if missing:
+    #     print(f"⚠️  {len(missing)} expected file(s) were already absent: {missing}")
+
+
 if __name__ == "__main__":
-    proteinPrep("my_target")
-    ligPrep("CC(=O)OC1=CC=CC=C1C(=O)O")
-    dock(10.5, 12.1, -5.4, 20, 20, 20)
+    proteinPrep("8ZYP")
+    ligPrep("Fc1ccc(cc1)Cn2c5ccccc5nc2NC4CCN(CCc3ccc(OC)cc3)CC4")
+    dock(
+        143.219, 153.455, 132.858, 20, 20, 20
+    )  # Center of Mass of bound ligand in 8ZYP.cif: [ 143.219, 153.455, 132.858]
 
     energies = get_top_energies()
     print(f"Top 3 binding modes: {energies}")
+    cleanup()

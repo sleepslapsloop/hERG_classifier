@@ -7,6 +7,7 @@
 dir_curr=$(pwd)
 cd ../Data/Docking/receptor
 
+obabel $1.cif -O $1.pdb
 grep "^ATOM" $1.pdb > protein_clean.pdb
 obabel protein_clean.pdb -O receptor.pdbqt -xr -p 7.4
 
