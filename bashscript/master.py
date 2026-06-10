@@ -14,7 +14,7 @@ class hERG:
     center_z: float = center_of_mass[2]
 
 
-def _run_script(script_name: str, args: list):
+def _run_script(script_name: str, args: list, timeout: int = 120):
     """Internal helper function to execute bash scripts securely."""
     script_path = BASE_DIR / script_name
     command = ["bash", str(script_path)] + [str(arg) for arg in args]
@@ -23,8 +23,15 @@ def _run_script(script_name: str, args: list):
         # cwd=BASE_DIR ensures the relative paths in the bash scripts (like ../Data/)
         # don't break when master.py is imported and run from a completely different folder.
         subprocess.run(
-            command, capture_output=True, text=True, check=True, cwd=BASE_DIR
+            command,
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=BASE_DIR,
+            timeout=timeout,
         )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"⏱️  {script_name} timed out after {timeout}s")
     except subprocess.CalledProcessError as e:
         print(f"❌ Error in {script_name}:\n{e.stderr}")
         raise
@@ -39,7 +46,7 @@ def proteinPrep(inputName: str):
 def ligPrep(smiles: str):
     """Prepares the ligand for docking from a SMILES string."""
     print("Preparing ligand...")
-    _run_script("ligPrep.sh", [smiles])
+    _run_script("ligPrep.sh", [smiles], timeout=30)
 
 
 def dock(
@@ -53,7 +60,7 @@ def dock(
     """Runs Vina docking with the specified grid box coordinates and dimensions."""
     print("Running Vina docking...")
     args = [center_x, center_y, center_z, size_x, size_y, size_z]
-    _run_script("vinaDock.sh", args)
+    _run_script("vinaDock.sh", args, timeout=900)
 
 
 def get_top_energies() -> list:

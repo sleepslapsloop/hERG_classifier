@@ -1,7 +1,7 @@
 ###################################################
 # This script docks the ligand using Vina.        #
 # It uses vinardo scoring                         #
-#                                                 #
+# Exhaustivity = 8 to reduce computation time    #
 ###################################################
 
 curr=$(pwd)
@@ -12,7 +12,8 @@ vina --receptor ../receptor/receptor.pdbqt \
      --center_x $1 --center_y $2 --center_z $3 \
      --size_x $4 --size_y $5 --size_z $6 \
      --scoring vinardo \
-     --exhaustiveness 10 \
+     --exhaustiveness 8 \
+     --cpu 16 \
      --num_modes 9 > log.txt
 
 grep "   1      " log.txt > 1.txt

@@ -7,7 +7,7 @@
 dir_curr=$(pwd)
 cd ../Data/Docking/ligand
 
-obabel -:"$1" -O ligand_temp.mol2 --gen3d --best -p 7.4
-obabel ligand_temp.mol2 -O ligand.pdbqt --minimize --ff MMFF94 --steps 2000 --sd
+obabel -:"$1" -O ligand.pdbqt --gen3d -p 7.4 --fastest
+# obabel ligand_temp.mol2 -O ligand.pdbqt --minimize --ff MMFF94 --steps 2000 --sd
 
 cd $dir_curr
