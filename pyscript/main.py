@@ -9,7 +9,7 @@ model = joblib.load(model_path)
 # 2. Input SMILES string (Example: a known blocker)
 input_smiles = "CN(C)c1ccc(/N=N/c2ccccn2)c(O)c1"
 
-print(f"Step 1: Parsing SMILES and generating 3D conformer...")
+print("Step 1: Parsing SMILES and generating 3D conformer...")
 
 # 3. Run the processing pipeline
 mol_2d = smiles_to_mol(input_smiles)
