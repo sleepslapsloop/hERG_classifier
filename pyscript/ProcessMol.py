@@ -1,5 +1,12 @@
+import numpy as np
 from rdkit import Chem
-from rdkit.Chem import AllChem
+from rdkit.Chem import (
+    AllChem,
+    Descriptors,
+    Descriptors3D,
+    Lipinski,
+    rdFingerprintGenerator,
+)
 from rdkit.Chem.MolStandardize import rdMolStandardize
 
 
@@ -19,35 +26,61 @@ def embed_3d(mol):
         return None
 
     try:
-        # 1. Strip Salts (Keep the largest fragment)
         chooser = rdMolStandardize.LargestFragmentChooser()
         clean_mol = chooser.choose(mol)
 
-        # 2. Neutralize the naked charges!
         uncharger = rdMolStandardize.Uncharger()
         neutral_mol = uncharger.uncharge(clean_mol)
 
-        # 3. Add explicit hydrogens
         mol_h = Chem.AddHs(neutral_mol)
 
-        # 4. Generate Initial 3D Coordinates (ETKDGv3)
         params = AllChem.ETKDGv3()  # type: ignore
         params.randomSeed = 42
         if AllChem.EmbedMolecule(mol_h, params) == -1:  # type: ignore
-            return None  # If it can't even guess a 3D shape, drop it
-
-        # 5. The Fallback Optimization Pipeline
-        # Try MMFF94 first (Best for drugs)
+            return None
         if AllChem.MMFFOptimizeMolecule(mol_h, maxIters=5000) != -1:  # type: ignore
             return mol_h
-
-        # Fallback to UFF (More generic periodic table coverage)
         elif AllChem.UFFOptimizeMolecule(mol_h, maxIters=5000) != -1:  # type: ignore
             return mol_h
-
-        # If both fail (exotic sulfur/metals), return the ETKDGv3 shape anyway!
         else:
             return mol_h
 
     except Exception:
         return None
+
+
+def get_morgan_fingerprint(mol, radius=2):
+    if mol is None:
+        return [0] * 2048
+
+    mfp1gen = rdFingerprintGenerator.GetMorganGenerator(radius=radius)
+    fp = mfp1gen.GetFingerprint(mol)
+    return list(fp)
+
+
+def compute_descriptors(mol):
+    if mol is None:
+        return None
+    if mol.GetNumConformers() == 0:
+        return None
+
+    features = {
+        "MolWt": Descriptors.MolWt(mol),
+        "LogP": Descriptors.MolLogP(mol),
+        "TPSA": Descriptors.TPSA(mol),
+        "HBD": Descriptors.NumHDonors(mol),
+        "HBA": Descriptors.NumHAcceptors(mol),
+        "RotB": Descriptors.NumRotatableBonds(mol),
+        "FormalCharge": Chem.GetFormalCharge(mol),
+        "RadiusGyr": Descriptors3D.RadiusOfGyration(mol),
+        "Asphericity": Descriptors3D.Asphericity(mol),
+        "Spherocity": Descriptors3D.SpherocityIndex(mol),
+        "PMI1": Descriptors3D.PMI1(mol),
+        "PMI2": Descriptors3D.PMI2(mol),
+        "PMI3": Descriptors3D.PMI3(mol),
+    }
+
+    descriptor_values = list(features.values())
+    fp_values = get_morgan_fingerprint(mol, radius=2)
+
+    return np.array(descriptor_values + fp_values)  # type: ignore
