@@ -16,8 +16,8 @@ y_test = pd.read_pickle("../Data/TestTrain/y_test.pkl")
 # 1. Initialize the Random Forest
 # n_jobs=-1 uses all available CPU cores to speed up training
 rf_model = RandomForestClassifier(
-    n_estimators=500,
-    max_depth=30,  # Restricts trees from growing infinitely deep
+    n_estimators=1024,
+    max_depth=50,  # Restricts trees from growing infinitely deep
     min_samples_leaf=2,  # Forces leaves to contain at least 2 molecules (stops memorization)
     max_features="sqrt",  # Limits the number of bits each tree can look at once
     class_weight="balanced",
@@ -43,7 +43,7 @@ print("\nClassification Report:")
 print(classification_report(y_test, y_pred))
 
 # Define the filename you want to save it as
-model_filename = "../Data/Models/herg_classifier_01.joblib"
+model_filename = "../Data/Models/herg_classifier_04.joblib"
 
 # Save the trained model to disk
 joblib.dump(rf_model, model_filename)

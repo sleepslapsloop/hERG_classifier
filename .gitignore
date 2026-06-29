@@ -1,5 +1,14 @@
 # pycache
 __pycache__/
+
+#docking - scrapped
 bashscript/
 Data/Docking/
 Data/Docked/
+pyscript/03_preprocess_docking_data.py
+
+settings.json
+
+Data/
+    *.pkl
+    *.joblib
